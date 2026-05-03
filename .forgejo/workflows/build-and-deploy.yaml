@@ -1,0 +1,55 @@
+name: Build and Deploy Frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.js'
+      - 'Dockerfile'
+      - 'nginx.conf'
+      - '.forgejo/workflows/build-and-deploy.yaml'
+
+env:
+  REGISTRY: forgejo.lab.themalinconicos.com
+  IMAGE_NAME: brian/donetick-frontend
+
+jobs:
+  build-and-push:
+    name: Build & Push Image
+    runs-on: docker
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to Forgejo Registry
+        run: echo "${{ secrets.REGISTRY_TOKEN }}" | docker login ${{ env.REGISTRY }} -u token --password-stdin
+
+      - name: Build image
+        run: |
+          docker build \
+            --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+            --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            .
+
+      - name: Push image
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Update deployment manifest
+        run: |
+          sed -i "s|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:.*|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}|" \
+            k8s/donetick-frontend/deployment.yaml
+          git config user.name "ci-bot"
+          git config user.email "ci-bot@noreply"
+          TOKEN="${{ secrets.GITHUB_TOKEN }}" && git remote set-url origin "$(git remote get-url origin | sed "s|://|://x-oauth-basic:${TOKEN}@|")"
+          git add k8s/donetick-frontend/deployment.yaml
+          git diff --cached --quiet || git commit -m "chore: update frontend image to ${{ github.sha }}"
+          git push
