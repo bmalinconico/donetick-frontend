@@ -2,6 +2,7 @@ import { Capacitor } from '@capacitor/core'
 import {
   Archive,
   ArrowBack,
+  FamilyRestroom,
   FilterAlt,
   FolderOpen,
   History,
@@ -51,6 +52,11 @@ const NavBar = () => {
       to: '/chores',
       label: t('navigation.allTasks'),
       icon: <Inbox />,
+    },
+    {
+      to: '/family',
+      label: 'Family',
+      icon: <FamilyRestroom />,
     },
     {
       to: '/archived',
@@ -158,6 +164,7 @@ const NavBar = () => {
       '/password/update',
       '/login/settings',
       '/welcome',
+      '/family',
     ].includes(location.pathname)
   ) {
     return (
