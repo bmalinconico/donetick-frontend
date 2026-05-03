@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: donetick-frontend
-          image: forgejo.lab.themalinconicos.com/brian/donetick-frontend:latest
+          image: forgejo.lab.themalinconicos.com/brian/donetick-frontend:38451eb2678c26e3928f4e306eb622c794d2e0ba
           ports:
             - name: http
               containerPort: 80
