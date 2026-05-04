@@ -66,9 +66,9 @@ const FamilyTaskList = ({ user, onBack }) => {
     markComplete.mutate(
       {
         choreId: chore.id,
-        body: {},
+        body: { completedBy: user.userId },
         completedDate: null,
-        performer: user.userId,
+        performer: null,
       },
       {
         onSuccess: () => {
