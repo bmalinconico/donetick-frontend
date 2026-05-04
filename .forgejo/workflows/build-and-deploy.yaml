@@ -1,4 +1,8 @@
-name: Build and Deploy Frontend
+name: Build and Push Frontend Image
+
+# K8s manifests live in the homelab monorepo at
+# k8s/apps/donetick-frontend/. Bump the image tag there to roll out
+# a new version (manual for now).
 
 on:
   push:
@@ -22,8 +26,6 @@ jobs:
   build-and-push:
     name: Build & Push Image
     runs-on: docker
-    permissions:
-      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,14 +44,3 @@ jobs:
         run: |
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-
-      - name: Update deployment manifest
-        run: |
-          sed -i "s|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:.*|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}|" \
-            k8s/donetick-frontend/deployment.yaml
-          git config user.name "ci-bot"
-          git config user.email "ci-bot@noreply"
-          TOKEN="${{ secrets.GITHUB_TOKEN }}" && git remote set-url origin "$(git remote get-url origin | sed "s|://|://x-oauth-basic:${TOKEN}@|")"
-          git add k8s/donetick-frontend/deployment.yaml
-          git diff --cached --quiet || git commit -m "chore: update frontend image to ${{ github.sha }}"
-          git push
