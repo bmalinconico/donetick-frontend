@@ -24,9 +24,7 @@ const endOfToday = () => {
   return d
 }
 
-const isAssignedTo = (chore, userId) =>
-  chore.assignedTo === userId ||
-  chore.assignees?.some(a => a.userId === userId)
+const isAssignedTo = (chore, userId) => chore.assignedTo === userId
 
 const isShowable = chore => {
   if (!chore.nextDueDate) return true
