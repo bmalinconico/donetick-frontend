@@ -7,42 +7,17 @@ import { saveTokens } from './TokenStorage'
 export const isFamilyKioskConfigured = () =>
   Boolean(FAMILY_USERNAME && FAMILY_PASSWORD)
 
-// Per-device escape hatch. When a kiosk device has "exited", we keep the shared
-// session (so no re-login is needed) but stop forcing the Family view and the
-// auth-route redirects, revealing the full app for admin tasks. Persisted so it
-// survives reloads until kiosk is explicitly re-entered from Settings.
-const KIOSK_EXIT_KEY = 'kioskExited'
-
-export const isKioskExited = () => {
-  try {
-    return localStorage.getItem(KIOSK_EXIT_KEY) === 'true'
-  } catch {
-    return false
-  }
-}
-
-// True when the app should actually behave as a kiosk right now: configured and
-// not temporarily exited on this device.
-export const isKioskActive = () => isFamilyKioskConfigured() && !isKioskExited()
-
-// Leave kiosk mode on this device and land in the normal app. Full reload so the
-// router re-evaluates its kiosk-dependent routes.
+// Escape hatch. "Exiting" the kiosk is deliberately not persisted: only the home
+// route (/) and the auth routes act as a kiosk, so leaving simply means navigating
+// into the normal app (which is fully usable). Any reload or relaunch loads the
+// kiosk home again and auto-returns to the Family view — so an accidental exit
+// self-heals with no stuck state to clear.
 export const exitKiosk = () => {
-  try {
-    localStorage.setItem(KIOSK_EXIT_KEY, 'true')
-  } catch {
-    // ignore storage failures — worst case the exit doesn't persist
-  }
   window.location.href = '/chores'
 }
 
-// Re-arm kiosk mode on this device and return to the Family view.
+// Explicitly return to the Family view.
 export const enterKiosk = () => {
-  try {
-    localStorage.removeItem(KIOSK_EXIT_KEY)
-  } catch {
-    // ignore
-  }
   window.location.href = '/'
 }
 

@@ -34,11 +34,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useUserProfile } from '../../queries/UserQueries'
-import {
-  enterKiosk,
-  isFamilyKioskConfigured,
-  isKioskExited,
-} from '../../utils/familyAuth'
+import { enterKiosk, isFamilyKioskConfigured } from '../../utils/familyAuth'
 import { isPlusAccount } from '../../utils/Helpers'
 import { isParentUser } from '../../utils/UserHelpers'
 
@@ -171,9 +167,10 @@ const SettingsOverview = () => {
         </Stack>
       </Box>
 
-      {/* Re-enter kiosk mode: shown only on a configured device that has
-          temporarily exited kiosk for admin tasks. */}
-      {isFamilyKioskConfigured() && isKioskExited() && (
+      {/* Return to the family kiosk. Settings is only reachable once you've left
+          the kiosk, so this is shown whenever the device is kiosk-configured.
+          (Reloading or relaunching also returns to the kiosk automatically.) */}
+      {isFamilyKioskConfigured() && (
         <Box sx={{ mb: 3 }}>
           <Card variant='soft' color='primary'>
             <CardContent
@@ -186,10 +183,10 @@ const SettingsOverview = () => {
               }}
             >
               <Box>
-                <Typography level='title-md'>Kiosk mode is paused</Typography>
+                <Typography level='title-md'>Family kiosk</Typography>
                 <Typography level='body-sm'>
-                  This device is showing the full app. Re-enable the family
-                  kiosk to return to the shared, no-login view.
+                  You&apos;re in the full app. Return to the shared, no-login
+                  family view (a reload or relaunch returns automatically).
                 </Typography>
               </Box>
               <Button
@@ -197,7 +194,7 @@ const SettingsOverview = () => {
                 onClick={enterKiosk}
                 sx={{ flexShrink: 0 }}
               >
-                Enter kiosk mode
+                Return to kiosk
               </Button>
             </CardContent>
           </Card>
