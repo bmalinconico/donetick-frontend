@@ -1,13 +1,26 @@
-import { Box, CircularProgress, Typography } from '@mui/joy'
+import {
+  Box,
+  Button,
+  CircularProgress,
+  DialogContent,
+  DialogTitle,
+  Modal,
+  ModalDialog,
+  Typography,
+} from '@mui/joy'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useImpersonateUser } from '../../contexts/ImpersonateUserContext'
 import { useCircleMembers, useUserProfile } from '../../queries/UserQueries'
-import { isFamilyKioskConfigured } from '../../utils/familyAuth'
+import { exitKiosk, isFamilyKioskConfigured } from '../../utils/familyAuth'
 import FamilyPicker from './FamilyPicker'
 import FamilyTaskList from './FamilyTaskList'
 
 const IDLE_MS = 60_000
+// Hidden escape hatch: press-and-hold the top-right corner this long to open the
+// exit-kiosk confirmation. Obscure enough that kids won't trigger it by accident.
+const EXIT_HOLD_MS = 3000
+const EXIT_CORNER_PX = 64
 
 const FamilyView = () => {
   const navigate = useNavigate()
@@ -120,7 +133,73 @@ const KioskShell = ({ children }) => (
     }}
   >
     {children}
+    <KioskExitControl />
   </Box>
 )
+
+// Detects a long-press in the top-right corner (via window listeners, so it never
+// covers or blocks any on-screen control) and offers to leave kiosk mode. Present
+// in every kiosk state, including the error screen, so a stuck device can escape.
+const KioskExitControl = () => {
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const timerRef = useRef(null)
+
+  useEffect(() => {
+    const inCorner = e =>
+      e.clientX >= window.innerWidth - EXIT_CORNER_PX &&
+      e.clientY <= EXIT_CORNER_PX
+    const clear = () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+        timerRef.current = null
+      }
+    }
+    const onDown = e => {
+      if (!inCorner(e)) return
+      clear()
+      timerRef.current = setTimeout(() => setConfirmOpen(true), EXIT_HOLD_MS)
+    }
+    const onMove = e => {
+      if (timerRef.current && !inCorner(e)) clear()
+    }
+    window.addEventListener('pointerdown', onDown)
+    window.addEventListener('pointerup', clear)
+    window.addEventListener('pointercancel', clear)
+    window.addEventListener('pointermove', onMove)
+    return () => {
+      window.removeEventListener('pointerdown', onDown)
+      window.removeEventListener('pointerup', clear)
+      window.removeEventListener('pointercancel', clear)
+      window.removeEventListener('pointermove', onMove)
+      clear()
+    }
+  }, [])
+
+  return (
+    <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+      <ModalDialog>
+        <DialogTitle>Exit kiosk mode?</DialogTitle>
+        <DialogContent>
+          This unlocks the full app (all chores, settings) on this device. You
+          can re-enable kiosk mode any time from Settings.
+        </DialogContent>
+        <Box
+          sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', mt: 2 }}
+        >
+          <Button
+            variant='plain'
+            color='neutral'
+            onClick={() => setConfirmOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button color='danger' onClick={exitKiosk}>
+            Exit kiosk
+          </Button>
+        </Box>
+      </ModalDialog>
+    </Modal>
+  )
+}
 
 export default FamilyView

@@ -34,6 +34,11 @@ import {
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useUserProfile } from '../../queries/UserQueries'
+import {
+  enterKiosk,
+  isFamilyKioskConfigured,
+  isKioskExited,
+} from '../../utils/familyAuth'
 import { isPlusAccount } from '../../utils/Helpers'
 import { isParentUser } from '../../utils/UserHelpers'
 
@@ -165,6 +170,39 @@ const SettingsOverview = () => {
           </Typography>
         </Stack>
       </Box>
+
+      {/* Re-enter kiosk mode: shown only on a configured device that has
+          temporarily exited kiosk for admin tasks. */}
+      {isFamilyKioskConfigured() && isKioskExited() && (
+        <Box sx={{ mb: 3 }}>
+          <Card variant='soft' color='primary'>
+            <CardContent
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 2,
+                flexDirection: { xs: 'column', sm: 'row' },
+              }}
+            >
+              <Box>
+                <Typography level='title-md'>Kiosk mode is paused</Typography>
+                <Typography level='body-sm'>
+                  This device is showing the full app. Re-enable the family
+                  kiosk to return to the shared, no-login view.
+                </Typography>
+              </Box>
+              <Button
+                startDecorator={<FamilyRestroom />}
+                onClick={enterKiosk}
+                sx={{ flexShrink: 0 }}
+              >
+                Enter kiosk mode
+              </Button>
+            </CardContent>
+          </Card>
+        </Box>
+      )}
 
       {/* Upgrade Card - Only show if user is not a Plus member */}
       {userProfile && !isPlusAccount(userProfile) && (

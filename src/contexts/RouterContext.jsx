@@ -11,7 +11,7 @@ import SettingsOverview from '@/views/Settings/SettingsOverview'
 import SettingsRoutes from '@/views/Settings/SettingsRoutes'
 import ThemeSettings from '@/views/Settings/ThemeSettings'
 import { Navigate, RouterProvider, createBrowserRouter } from 'react-router-dom'
-import { isFamilyKioskConfigured } from '../utils/familyAuth'
+import { isKioskActive } from '../utils/familyAuth'
 import AuthenticationLoading from '../views/Authorization/Authenticating'
 import ForgotPasswordView from '../views/Authorization/ForgotPasswordView'
 import LoginSettings from '../views/Authorization/LoginSettings'
@@ -48,7 +48,7 @@ import UserActivities from '../views/User/UserActivities'
 import UserPoints from '../views/User/UserPoints'
 const getMainRoute = () => {
   // Family kiosk: the shared, no-login family view is the home screen.
-  if (isFamilyKioskConfigured()) {
+  if (isKioskActive()) {
     return <FamilyView />
   }
   if (
@@ -64,7 +64,7 @@ const getMainRoute = () => {
 // In kiosk mode the auth screens are pointless (the app auto-authenticates), so
 // send them back to the family view. Elsewhere they render normally.
 const kioskRedirectOr = element =>
-  isFamilyKioskConfigured() ? <Navigate to='/' replace /> : element
+  isKioskActive() ? <Navigate to='/' replace /> : element
 const Router = createBrowserRouter([
   {
     path: '/',
