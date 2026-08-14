@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useImpersonateUser } from '../../contexts/ImpersonateUserContext'
 import { useCircleMembers, useUserProfile } from '../../queries/UserQueries'
+import { isFamilyKioskConfigured } from '../../utils/familyAuth'
 import FamilyPicker from './FamilyPicker'
 import FamilyTaskList from './FamilyTaskList'
 
@@ -58,6 +59,19 @@ const FamilyView = () => {
   }
 
   if (!userProfile) {
+    // In kiosk mode the app auto-authenticates and /login redirects back here, so
+    // navigating away would loop. Show a clear error instead (e.g. server down or
+    // the family account can't be loaded). Otherwise fall back to the login flow.
+    if (isFamilyKioskConfigured()) {
+      return (
+        <KioskShell>
+          <Typography level='h3' sx={{ textAlign: 'center', mt: 10, px: 4 }}>
+            Couldn&apos;t reach the family account. Check that the server is up,
+            then reload.
+          </Typography>
+        </KioskShell>
+      )
+    }
     navigate('/login')
     return null
   }

@@ -1,5 +1,6 @@
 import { Preferences } from '@capacitor/preferences'
 import { API_URL } from '../Config'
+import { familyAutoLogin, isFamilyKioskConfigured } from './familyAuth'
 import { logout, RefreshToken } from './Fetcher'
 import {
   clearAllTokens,
@@ -45,11 +46,10 @@ class ApiClient {
     // Check if refresh token is expired BEFORE attempting refresh
     const refreshExpired = await isRefreshTokenExpired()
     if (refreshExpired) {
-      console.log('Refresh token expired, forcing logout')
+      console.log('Refresh token expired')
       await clearAllTokens()
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login'
-      }
+      // Let the caller fall through to handleLogout(), which re-authenticates in
+      // kiosk mode instead of bouncing to the login screen.
       return { success: false, error: 'Refresh token expired' }
     }
 
@@ -132,6 +132,22 @@ class ApiClient {
   // Helper to avoid repeating cleanup code
   async handleLogout() {
     await clearAllTokens()
+
+    // Kiosk mode: silently re-authenticate with the shared family account rather
+    // than showing the login screen. Reload on success so all queries refetch
+    // with the fresh token.
+    if (isFamilyKioskConfigured()) {
+      const ok = await familyAutoLogin()
+      if (ok) {
+        window.location.reload()
+        return
+      }
+      // Auto-login failed (e.g. server down / bad creds). Send back to the root
+      // kiosk view; avoid /login since it redirects to / in kiosk mode.
+      if (window.location.pathname !== '/') window.location.href = '/'
+      return
+    }
+
     try {
       await logout()
     } catch (e) {

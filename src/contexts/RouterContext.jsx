@@ -10,7 +10,8 @@ import Settings from '@/views/Settings/Settings'
 import SettingsOverview from '@/views/Settings/SettingsOverview'
 import SettingsRoutes from '@/views/Settings/SettingsRoutes'
 import ThemeSettings from '@/views/Settings/ThemeSettings'
-import { RouterProvider, createBrowserRouter } from 'react-router-dom'
+import { Navigate, RouterProvider, createBrowserRouter } from 'react-router-dom'
+import { isFamilyKioskConfigured } from '../utils/familyAuth'
 import AuthenticationLoading from '../views/Authorization/Authenticating'
 import ForgotPasswordView from '../views/Authorization/ForgotPasswordView'
 import LoginSettings from '../views/Authorization/LoginSettings'
@@ -46,6 +47,10 @@ import TimerDetails from '../views/Timer/TimerDetails'
 import UserActivities from '../views/User/UserActivities'
 import UserPoints from '../views/User/UserPoints'
 const getMainRoute = () => {
+  // Family kiosk: the shared, no-login family view is the home screen.
+  if (isFamilyKioskConfigured()) {
+    return <FamilyView />
+  }
   if (
     // if domain is www.donetick.com or donetick.com  then show landing page:
     window.location.hostname === 'www.donetick.com' ||
@@ -55,6 +60,11 @@ const getMainRoute = () => {
   }
   return <MyChores />
 }
+
+// In kiosk mode the auth screens are pointless (the app auto-authenticates), so
+// send them back to the family view. Elsewhere they render normally.
+const kioskRedirectOr = element =>
+  isFamilyKioskConfigured() ? <Navigate to='/' replace /> : element
 const Router = createBrowserRouter([
   {
     path: '/',
@@ -177,7 +187,7 @@ const Router = createBrowserRouter([
       },
       {
         path: '/login',
-        element: <LoginView />,
+        element: kioskRedirectOr(<LoginView />),
       },
       {
         path: '/login/settings',
@@ -185,7 +195,7 @@ const Router = createBrowserRouter([
       },
       {
         path: '/signup',
-        element: <SignupView />,
+        element: kioskRedirectOr(<SignupView />),
       },
 
       {
@@ -194,7 +204,7 @@ const Router = createBrowserRouter([
       },
       {
         path: '/welcome',
-        element: <Landing />,
+        element: kioskRedirectOr(<Landing />),
       },
       {
         path: '/test',

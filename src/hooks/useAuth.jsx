@@ -1,6 +1,7 @@
+import { CircularProgress } from '@mui/joy'
 import { createContext, useContext, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { apiClient } from '../utils/ApiClient'
+import { familyAutoLogin, isFamilyKioskConfigured } from '../utils/familyAuth'
 import { clearAllTokens, saveTokens } from '../utils/TokenStorage'
 
 const AuthContext = createContext(null)
@@ -17,7 +18,11 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => localStorage.getItem('token'))
   const [user, setUser] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
-  const navigate = useNavigate()
+  // In kiosk mode we hold rendering until the boot-time auto-login resolves, so
+  // data-fetching pages don't fire requests before a token exists.
+  const [isBootstrapping, setIsBootstrapping] = useState(() =>
+    isFamilyKioskConfigured(),
+  )
   const baseURL = apiClient.getApiURL()
   const isAuthenticated = !!token
 
@@ -103,32 +108,58 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  // Family kiosk bootstrap: if there's no usable token, silently authenticate
+  // with the shared family account so the login screen is never shown. Runs once
+  // on mount. Does nothing when kiosk mode isn't configured.
   useEffect(() => {
-    // const initAuth = async () => {
-    //   if (token && !isTokenExpired()) {
-    //     await fetchUser()
-    //   } else if (token && isTokenExpired()) {
-    //     // Token is expired, but don't refresh here
-    //     // Let the first API call handle refresh via ApiClient
-    //     // Just try to fetch user - if it fails, ApiClient will handle refresh
-    //     await fetchUser()
-    //   } else {
-    //     clearAuth()
-    //     navigate('/login')
-    //   }
-    //   setIsLoading(false)
-    // }
-    // initAuth()
-  }, [token, navigate])
+    if (!isFamilyKioskConfigured()) return
+
+    let cancelled = false
+    const bootstrap = async () => {
+      const existing = localStorage.getItem('token')
+      if (!existing || isTokenExpired()) {
+        // If we have an expired-but-present token, start clean so the fresh
+        // login result isn't mistaken for a still-valid session.
+        await familyAutoLogin()
+        if (!cancelled) setToken(localStorage.getItem('token'))
+      }
+      if (!cancelled) setIsBootstrapping(false)
+    }
+    bootstrap()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const value = {
     token,
     user,
     isLoading,
+    isBootstrapping,
     isAuthenticated,
     login,
     fetchUser,
   }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={value}>
+      {isBootstrapping ? <KioskBootstrapLoader /> : children}
+    </AuthContext.Provider>
+  )
 }
+
+// Full-screen loader shown while the kiosk auto-login resolves on boot.
+const KioskBootstrapLoader = () => (
+  <div
+    style={{
+      position: 'fixed',
+      inset: 0,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}
+  >
+    <CircularProgress size='lg' />
+  </div>
+)
